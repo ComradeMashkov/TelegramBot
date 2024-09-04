@@ -9,7 +9,7 @@ from phrases import MARKS, DICKS_PHRASES, SURPRISE_PHRASES, QUESTION_MARKS, DUMB
 import requests
 from telegram import Update
 from telegram.ext import CallbackContext
-from utils import load_muted_users, save_muted_users, get_recent_muted_usernames, load_cat_picture
+from utils import *
 
 
 load_dotenv()
@@ -17,7 +17,7 @@ load_dotenv()
 TOKEN = os.getenv('TELEGRAM_TOKEN')
 CATS_API_KEY=os.getenv('CATS_API_KEY')
 
-CONFIG_PATH = os.path.join(os.path.dirname(__file__), '..', 'config.ini')
+CONFIG_FILE = os.path.join(os.path.dirname(__file__), '..', 'database', 'config.json')
 
 MUTED_USERS_FILE = os.path.join(os.path.dirname(__file__), '..', 'database', 'muted_users.json')
 
@@ -61,29 +61,29 @@ def set_frequency(update: Update, context: CallbackContext) -> None:
         return
     
     user = update.message.from_user
-    
-    # Ensure frequency is provided and is a valid float
+
+    chat_id = str(update.effective_chat.id)
+    config = load_config(CONFIG_FILE)
+
+    # Ensure frequency is provided and is valid float
     if len(context.args) == 1:
         try:
             new_frequency = float(context.args[0])
             if 0 <= new_frequency <= 1:
-                # Update the frequency in config.ini
-                config = configparser.ConfigParser()
-                config.read(CONFIG_PATH)
-                config.set('settings', 'reply_frequency', str(new_frequency))
-                with open(CONFIG_PATH, 'w') as configfile:
-                    config.write(configfile)
-                
-                # Notify user of success
+                if chat_id not in config:
+                    config[chat_id] = {}
+                config[chat_id]['chat_name'] = update.effective_chat.title
+                config[chat_id]['reply_frequency'] = new_frequency
+                save_config(CONFIG_FILE, config)
                 update.message.reply_text(f"Соотношение ответов установлено на {new_frequency * 100:.0f}%.")
             else:
                 update.message.reply_text("Частота должна быть от 0 до 1.")
-        except ValueError:
+        except (IndexError, ValueError):
             update.message.reply_text("Какая-то хуйня. Частота должна быть от 0 до 1.")
     else:
         update.message.reply_text("Использование: /setfreq <частота> (напр., /setfreq 0.3)")
 
-    print(f"Command /setfreq is called by {user.name}.")
+    print(f"Command /setfreq is called by {user.name}")
 
 def set_sticker_frequency(update: Update, context: CallbackContext) -> None:
     """Set the sticker reply frequency, restricted to admins."""
@@ -96,29 +96,29 @@ def set_sticker_frequency(update: Update, context: CallbackContext) -> None:
         return
     
     user = update.message.from_user
-    
+
+    chat_id = str(update.effective_chat.id)
+    config = load_config(CONFIG_FILE)
+
     # Ensure frequency is provided and is a valid float
     if len(context.args) == 1:
         try:
-            new_frequency = float(context.args[0])
-            if 0 <= new_frequency <= 1:
-                # Update the frequency in config.ini
-                config = configparser.ConfigParser()
-                config.read(CONFIG_PATH)
-                config.set('settings', 'sticker_frequency', str(new_frequency))
-                with open(CONFIG_PATH, 'w') as configfile:
-                    config.write(configfile)
-                
-                # Notify user of success
-                update.message.reply_text(f"Соотношение стикеров в ответах установлено на {new_frequency * 100:.0f}%.")
+            new_stick_frequency = float(context.args[0])
+            if 0 <= new_stick_frequency <= 1:
+                if chat_id not in config:
+                    config[chat_id] = {}
+                config[chat_id]['chat_name'] = update.effective_chat.title
+                config[chat_id]['sticker_frequency'] = new_stick_frequency
+                save_config(CONFIG_FILE, config)
+                update.message.reply_text(f"Соотношение стикеров в ответах установлено на {new_stick_frequency * 100:.0f}%.")
             else:
                 update.message.reply_text("Частота должна быть от 0 до 1.")
-        except ValueError:
+        except (IndexError, ValueError):
             update.message.reply_text("Какая-то хуйня. Частота должна быть от 0 до 1.")
     else:
         update.message.reply_text("Использование: /setstick <частота> (напр., /setstick 0.3)")
-
-    print(f"Command /setstick is called by {user.name}.")
+    
+    print(f"Command /setstick is called by {user.name}")
 
 def mute_user(update: Update, context: CallbackContext) -> None:
     """Mute a user based on the /mute command, restricted to admins."""
@@ -155,7 +155,7 @@ def mute_user(update: Update, context: CallbackContext) -> None:
 
     update.message.reply_text(f"Ебальничек прикрыл? @{username} замучен на {minutes} мин.")
 
-    print(f"Command /mute is called by {update.message.from_user.name}.")
+    print(f"Command /mute is called by {update.message.from_user.name}")
 
 def unmute_user(update: Update, context: CallbackContext) -> None:
     """Unmute a user based on the /unmute command, restricted to admins."""
@@ -198,7 +198,7 @@ def unmute_user(update: Update, context: CallbackContext) -> None:
     else:
         update.message.reply_text(f"Пользователь @{username_to_unmute} не в муте. Может исправить это?")
 
-    print(f"Command /unmute is called by {update.message.from_user.name}.")
+    print(f"Command /unmute is called by {update.message.from_user.name}")
 
 
 def get_cock_size(update: Update, context: CallbackContext) -> None:
@@ -228,7 +228,7 @@ def get_cat_picture(update: Update, context: CallbackContext) -> None:
     
     update.message.reply_photo(image_url)
 
-    print(f"Command /cat is called by {update.message.from_user.name}.")
+    print(f"Command /cat is called by {update.message.from_user.name}")
 
 def get_dumb_rating(update: Update, context: CallbackContext) -> None:
     """Generate a random dumb rating for a user."""
@@ -238,11 +238,11 @@ def get_dumb_rating(update: Update, context: CallbackContext) -> None:
             # Generating dumb rating
             rating = random.randint(0, 11)
 
-            reply_text = f"Оценка тупости @{replied_user.username}: {rating}/11. {random.choice(DUMB_PHRASES[rating])}"
+            reply_text = f"Оценка тупости @{replied_user.username}: {rating}/10. {random.choice(DUMB_PHRASES[rating])}"
             update.message.reply_text(reply_text)
         else:
             update.message.reply_text("Ты не можешь использовать эту команду на группу или бота, ебанат.")
     else:
         update.message.reply_text("Используй команду /dumb в ответ на сообщение пользователя, ебанат.")
 
-    print(f"Command /dumb is called by {update.message.from_user.name}.")
+    print(f"Command /dumb is called by {update.message.from_user.name}")

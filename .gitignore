@@ -1,4 +1,6 @@
 # Cache
 src/__pycache__/
 .venv/
+
+# Variabled configs and environment files
 .env

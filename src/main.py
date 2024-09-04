@@ -7,10 +7,10 @@ from admin_panel import *
 from admin_panel import TOKEN, MUTED_USERS_FILE
 from telegram import Update, InputFile
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
-from utils import get_recent_muted_usernames
+from utils import get_recent_muted_usernames, load_config
 
 
-CONFIG_PATH = os.path.join(os.path.dirname(__file__), '..', 'config.ini')
+CONFIG_FILE = os.path.join(os.path.dirname(__file__), '..', 'database', 'config.json')
 
 STICKERS_FILE_PATH = 'assets/stickers/'
 STICKERS_LIST = [STICKERS_FILE_PATH + sticker_rel_path for sticker_rel_path in os.listdir(STICKERS_FILE_PATH)]
@@ -18,11 +18,13 @@ STICKERS_LIST = [STICKERS_FILE_PATH + sticker_rel_path for sticker_rel_path in o
 
 def handle_comment(update: Update, context: CallbackContext) -> None:
     # Reload config to get the latest frequency
-    config = configparser.ConfigParser()
-    config.read(CONFIG_PATH)
+    config = load_config(CONFIG_FILE)
 
-    reply_frequency = float(config.get('settings', 'reply_frequency'))
-    sticker_frequency = float(config.get('settings', 'sticker_frequency'))
+    chat_id = str(update.effective_chat.id)
+    chat_config = config.get(chat_id, {})
+
+    reply_frequency = float(chat_config.get('reply_frequency', 0.5))
+    sticker_frequency = float(chat_config.get('sticker_frequency', 0.5))
 
     muted_usernames = get_recent_muted_usernames(MUTED_USERS_FILE)
 

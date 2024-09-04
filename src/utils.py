@@ -4,6 +4,16 @@ import os
 from datetime import datetime
 import requests
 
+
+def load_config(config_file: str):
+    if os.path.exists(config_file):
+        with open(config_file, 'r', encoding='utf-8') as f:
+            return json.load(f)
+        
+def save_config(config_file: str, config) -> None:
+    with open(config_file, 'w', encoding='utf-8') as f:
+        json.dump(config, f, indent=4, ensure_ascii=False)
+
 def load_muted_users(muted_users_file: str):
     """Load the list of muted users from the JSON file."""
     if os.path.exists(muted_users_file):

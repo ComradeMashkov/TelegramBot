@@ -1,0 +1,22 @@
+{
+    "-1002087853115": {
+        "reply_frequency": 0.5,
+        "sticker_frequency": 0.5,
+        "chat_name": "bot_Test Chat"
+    },
+    "-4574218164": {
+        "reply_frequency": 1.0,
+        "sticker_frequency": 1.0,
+        "chat_name": "залупа test"
+    },
+    "-787642205": {
+        "reply_frequency": 0.0,
+        "sticker_frequency": 0.0,
+        "chat_name": "Святыни Москвы и Зеленограда"
+    },
+    "-1001241336671": {
+        "chat_name": "тут срать",
+        "reply_frequency": 0.5,
+        "sticker_frequency": 0.5
+    }
+}
